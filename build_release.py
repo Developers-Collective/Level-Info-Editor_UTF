@@ -18,7 +18,7 @@ import PyInstaller.__main__
 
 PROJECT_NAME = 'Level Info Editor'
 FULL_PROJECT_NAME = 'Level Info Editor'
-PROJECT_VERSION = '1.5'
+PROJECT_VERSION = '1.5-UTF'
 
 WIN_ICON = None
 MAC_ICON = None
@@ -26,7 +26,7 @@ MAC_BUNDLE_IDENTIFIER = 'com.example.levelinfoeditor'
 
 SCRIPT_FILE = 'level_info_editor.py'
 DATA_FOLDERS = []
-DATA_FILES = ['readme.md', 'license.txt', 'charcodes.txt']
+DATA_FILES = ['readme.md', 'license.txt', 'charcodes.txt', 'data.txt']
 
 EXCLUDE_SELECT = True
 EXCLUDE_THREADING = True

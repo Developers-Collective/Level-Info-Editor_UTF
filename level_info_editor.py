@@ -1,9 +1,8 @@
-#!/usr/bin/python
-# -*- coding: latin-1 -*-
+# -*- coding: utf-8 -*-
 
 # Level Info Editor - Edits NewerSMBW's LevelInfo.bin
-# Version 1.5
-# Copyright (C) 2013-2014 RoadrunnerWMC
+# Version 1.5-utf
+# Copyright (C) 2013-2021 RoadrunnerWMC, 2021-2022 Asu-chan, 2023 @wakanameko2
 
 # This file is part of Level Info Editor.
 
@@ -30,12 +29,113 @@
 ################################################################
 
 
-version = '1.5'
+AppName = 'Level Info Editor'
+version = '1.5-UTF'
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 import sys
+import os
 
+# setup
 
+s = os.getcwd() #get path
+print(s)
+STpath = (f"{s}/data.txt") # get setting data path
+print(STpath)
+SFile = open(STpath, 'r') # open setting file
+lines = SFile.readlines() # read setting file lines
+print (lines)
+# SFileAF = [line.rstrip("\n") for line in lines] # delete this -> '\n'
+# print(SFileAF)
+
+#===========about Setting File(/data.txt)===========#
+#  EN -> MSLANG = 'English'   L -> VMode = 'Light'  #
+#  JP -> MSLANG = 'Japanese'  D -> VMode = 'Dark'   #
+#      example: ENL -> English & Light Mode         #
+#===================================================#
+
+with open(f"{s}/data.txt", "r") as f:
+    for line in f:
+        if "EN" in line:
+            MSLANG = 'English'
+            print('Selected EN!')
+            
+        else:
+            MSLANG = 'Japanese'
+            print('Selected JP!')
+
+with open(f"{s}/data.txt", "r") as f:
+    for line in f:
+        if "L" in line:
+            VMode = 'Light'
+            print('Selected Light!')
+            
+        else:
+            VMode = 'Dark'
+            print('Selected Dark!')
+
+StyleSheet = '''
+QWidget {
+    background-color: #111111;
+    color: #FEFFFE;
+} 
+QVBoxLayout {
+    background-color: #111111;
+    color: #FEFFFE;
+} 
+QMainWindow {
+    background-color: #15202B;
+    color: #FEFFFE;
+} 
+QFileDialog {
+    background-color: #15202B;
+    color: #15202B;
+} 
+QListWidget {
+    background-color: #15202b;
+}
+QGroupBox {
+    background-color: #111111;
+}
+QDialogButtonBox {
+    background-color: #111111;
+}
+QPlainTextEdit {
+    background-color: #15202b;
+}
+QDialog {
+    background-color: #111111;
+}
+QLabel {
+    background-color: #111111;
+}
+QSpinBox {
+    background-color: #15202b;
+}
+QHBoxLayout {
+    background-color: #111111;
+}
+QComboBox {
+    background-color: #15202b;
+}
+QCheckBox {
+    background-color: #111111;
+}
+QFormLayout {
+    background-color: #111111;
+}
+QLineEdit {
+    background-color: #15202b;
+}
+QGridLayout {
+    background-color: #111111;
+}
+QTabWidget {
+    background-color: #111111;
+}
+'''
+
+# end of setup
 
 class WorldInfo():
     """Class that represents a world"""
@@ -88,6 +188,8 @@ class LevelInfo():
         self.NormalExit = False
         self.SecretExit = False
         self.RightSide = False
+        self.Vignette = 0
+        self.HideTimer = False
 
     def toPyObject(self):
         """Py2/Py3 compatibility"""
@@ -119,6 +221,7 @@ class LevelInfo():
         self.NormalExit  = ((flags >> 4)  & 1 == 1)
         self.SecretExit  = ((flags >> 5)  & 1 == 1)
         self.RightSide   = ((flags >> 10) & 1 == 1)
+        self.HideTimer   = ((flags >> 8) & 1 == 1)
 
     def getFlags(self):
         """Returns an int which represent the two bytes the flags are encoded in"""
@@ -128,23 +231,28 @@ class LevelInfo():
         if self.NormalExit: b1 += 0x10
         if self.SecretExit: b1 += 0x20
         if self.RightSide:  b2 += 0x04
+        if self.HideTimer:  b2 += 0x01
         return (b2 << 8) | b1
+
+    def setVignette(self, vig):
+        """Sets the Vignette (vignette number)"""
+        self.Vignette = vig
 
 
 
 class LevelInfoFile():
     """Class that represents LevelInfo.bin"""
-    def __init__(self, rawdata=None):
+    def __init__(self, rawdata=None, isOld=False):
         """Initialises the LevelInfoFile"""
         if rawdata == None: self.initAsEmpty()
-        else: self.initFromData(rawdata)
+        else: self.initFromData(rawdata, isOld)
 
     def initAsEmpty(self):
         """Sets all the variables to their defaults"""
         self.worlds = []
         self.comments = ''
 
-    def initFromData(self, rawdata):
+    def initFromData(self, rawdata, isOld):
         """Initialises the LevelInfoFile from raw binary data"""
         global levelNamesOffset
 
@@ -189,10 +297,25 @@ class LevelInfoFile():
                 if textOffset < minTextOffset: minTextOffset = textOffset
                 textLength = levelData[4]
                 text = ''
-                for char in rawdata[textOffset:textOffset + textLength]:
-                    char = char + 0x30
-                    if char > 255: char -= 256
-                    text += chr(char)
+
+                if isOld == True:
+                    for char in rawdata[textOffset:textOffset + textLength]:
+                        char = char + 0x30
+                        if char > 255: char -= 256
+                        text += chr(char)
+                else:
+                    i = False
+                    preChar = 0
+                    for char in rawdata[textOffset:textOffset + (textLength*2)]:
+                        if i == False:
+                            preChar = char
+                        else:
+                            # char = char + 0x30
+                            # if char > 255: char -= 256
+                            newChar = (preChar << 8) | char
+                            text += chr(newChar)
+
+                        i = not i
 
                 # Add header info or levels
                 if levelData[3] >= 100:
@@ -214,6 +337,7 @@ class LevelInfoFile():
                     level.setDisplayNameL(levelData[3])
                     flags = (levelData[6] << 8) | levelData[7]
                     level.setFlags(flags)
+                    level.setVignette(levelData[5])
 
                     # Add it to world
                     world.Levels.append(level)
@@ -310,11 +434,12 @@ class LevelInfoFile():
                 worldData.append(0x00)
                 worldData.append((CurrentTextOffset >> 8) & 0xFF)
                 worldData.append((CurrentTextOffset >> 0) & 0xFF)
-                CurrentTextOffset += len(WName) + 1
+                CurrentTextOffset += (len(WName) + 1) * 2
+                # print("length: %X -> %X %X" % (len(level.name), ((len(level.name) * 2) + 1), ((len(level.name) + 1) * 2)))
                 for char in WName: Text.append(ord(char))
                 Text.append(0x00)
 
-            # Add data to worldData for each level
+            # Add data to worldData for each levels
             for level in world.Levels:
                 flags = level.getFlags()
                 worldData.append(level.FileW - 1)
@@ -322,14 +447,15 @@ class LevelInfoFile():
                 worldData.append(level.DisplayW)
                 worldData.append(level.DisplayL)
                 worldData.append(len(level.name))
-                worldData.append(0x00)
+                worldData.append(level.Vignette)
                 worldData.append((flags >> 8) & 0xFF)
                 worldData.append((flags >> 0) & 0xFF)
                 worldData.append(0x00)
                 worldData.append(0x00)
                 worldData.append((CurrentTextOffset >> 8) & 0xFF)
                 worldData.append((CurrentTextOffset >> 0) & 0xFF)
-                CurrentTextOffset += len(level.name) + 1
+                CurrentTextOffset += (len(level.name) + 1) * 2
+                # print("length: %X -> %X %X" % (len(level.name), ((len(level.name) * 2) + 1), ((len(level.name) + 1) * 2)))
                 for char in level.name: Text.append(ord(char))
                 Text.append(0x00)
 
@@ -347,9 +473,140 @@ class LevelInfoFile():
 
         # Add text
         for char in Text:
-            char = char - 0x30
-            if char < 0: char += 256
-            result.append(char)
+            # char = char - 0x30
+            # if char < 0: char += 256
+            # result.append(char)
+            result.append((char >> 8) & 0xFF)
+            result.append((char >> 0) & 0xFF)
+
+        # Py2 saves binary files as strings
+        if sys.version[0] == '2':
+            string = ''
+            for i in result: string += chr(i)
+            return string
+        else:
+            return bytes(result)
+
+    def exportTXT(self):
+        """Returns bytes that can be saved back to a LevelInfo.bin file"""
+        #resultxt = "Newer Level Info Editor v1.5 - Prankster Comets Edition\n"
+        resultxt = "Newer Level Info Editor v1.5-UTF by @wakanameko2\n"
+        result = []
+        TextStart = self.GetCommentsOffset() + len(self.comments) + 1
+
+        # First things first - add "NWRp"
+        result.append(ord('N'))
+        result.append(ord('W'))
+        result.append(ord('R'))
+        result.append(ord('p'))
+
+        # Add the Number of Worlds value (we'll only worry about the last 2 bytes)
+        NumOfWorlds = len(self.worlds)
+        resultxt += "WorldCount: {}\n".format(NumOfWorlds)
+        result.append((NumOfWorlds >> 24) & 0xFF)
+        result.append((NumOfWorlds >> 16) & 0xFF)
+        result.append((NumOfWorlds >>  8) & 0xFF)
+        result.append((NumOfWorlds >>  0) & 0xFF)
+
+        # Add blank spaces for each world value
+        for w in self.worlds:
+            for i in range(4): result.append(0)
+
+        # Add worlds and world-offsets at the same time
+        CurrentOffset = len(result)
+        CurrentTextOffset = int(TextStart) # make a new int
+        Text = []
+        WorldNumber = 0
+        for world in self.worlds:
+            resultxt += "World {}:\n".format(WorldNumber)
+
+            # Set the World Offset start value to CurrentOffset
+            result[ 8+(WorldNumber*4)] = (CurrentOffset >> 24) & 0xFF
+            result[ 9+(WorldNumber*4)] = (CurrentOffset >> 16) & 0xFF
+            result[10+(WorldNumber*4)] = (CurrentOffset >>  8) & 0xFF
+            result[11+(WorldNumber*4)] = (CurrentOffset >>  0) & 0xFF
+
+            # Create a place to store some world info
+            worldData = []
+
+            # Add the Number of Levels value
+            num = len(world.Levels)
+            if world.HasL: num += 1
+            if world.HasR: num += 1
+            worldData.append((num >> 24) & 0xFF)
+            worldData.append((num >> 16) & 0xFF)
+            worldData.append((num >>  8) & 0xFF)
+            worldData.append((num >>  0) & 0xFF)
+
+            # Add data to worldData for each world half
+            for exists, name in zip((world.HasL, world.HasR), ('L', 'R')):
+                if not exists: continue
+                WName = eval('world.%sName' % name)
+                worldData.append(0x62) # filename: 98-98
+                worldData.append(0x62)
+                worldData.append(world.WorldNumber) # display name: WN-100
+                worldData.append(0x64 if name =='L' else 0x65)
+                worldData.append(len(WName))
+                worldData.append(0x00)
+                worldData.append(0x00 if name == 'L' else 0x04)
+                worldData.append(0x00)
+                worldData.append(0x00)
+                worldData.append(0x00)
+                worldData.append((CurrentTextOffset >> 8) & 0xFF)
+                worldData.append((CurrentTextOffset >> 0) & 0xFF)
+                CurrentTextOffset += (len(WName) + 1) * 2
+                # print("length: %X -> %X %X" % (len(level.name), ((len(level.name) * 2) + 1), ((len(level.name) + 1) * 2)))
+                for char in WName: Text.append(ord(char))
+                Text.append(0x00)
+
+            # Add data to worldData for each levels
+            for level in world.Levels:
+                levelTable = ['A', 'Tower', 'GH', 'Castle', 'Cannon', 'FCastle', 'Ambush', 'Airship', 'Peach', 'HouseI', 'HouseS', 'HouseU', 'Anchor', 'Coin', 'B', 'C', 'Bonus']
+                levelS = str(level.DisplayL)
+                if level.DisplayL >= 20 and level.DisplayL <= 36:
+                    levelS = levelTable[level.DisplayL-20]
+
+                resultxt += "\t{}-{}: {}\n".format(level.DisplayW, levelS, level.name)
+                flags = level.getFlags()
+                worldData.append(level.FileW - 1)
+                worldData.append(level.FileL - 1)
+                worldData.append(level.DisplayW)
+                worldData.append(level.DisplayL)
+                worldData.append(len(level.name))
+                worldData.append(level.Vignette)
+                worldData.append((flags >> 8) & 0xFF)
+                worldData.append((flags >> 0) & 0xFF)
+                worldData.append(0x00)
+                worldData.append(0x00)
+                worldData.append((CurrentTextOffset >> 8) & 0xFF)
+                worldData.append((CurrentTextOffset >> 0) & 0xFF)
+                CurrentTextOffset += (len(level.name) + 1) * 2
+                # print("length: %X -> %X %X" % (len(level.name), ((len(level.name) * 2) + 1), ((len(level.name) + 1) * 2)))
+                for char in level.name: Text.append(ord(char))
+                Text.append(0x00)
+
+            # Add worldData to result
+            for i in worldData:
+                result.append(i)
+                CurrentOffset += 1
+
+            # Get ready for the next world
+            resultxt += "\n"
+            WorldNumber += 1
+
+        # Add the comments
+        for char in self.comments: result.append(ord(char))
+        result.append(0x00)
+
+        # Add text
+        for char in Text:
+            # char = char - 0x30
+            # if char < 0: char += 256
+            # result.append(char)
+            result.append((char >> 8) & 0xFF)
+            result.append((char >> 0) & 0xFF)
+
+        return resultxt
 
         # Py2 saves binary files as strings
         if sys.version[0] == '2':
@@ -373,9 +630,17 @@ class DNDPicker(QtWidgets.QListWidget):
         QtWidgets.QListWidget.__init__(self)
         self.handler = handler
         self.setDragDropMode(QtWidgets.QListWidget.InternalMove)
+        if VMode == 'Dark':
+            self.setStyleSheet(StyleSheet)
+        else:
+            pass
     def dropEvent(self, event):
         QtWidgets.QListWidget.dropEvent(self, event)
         self.handler()
+        if VMode == 'Dark':
+            self.setStyleSheet(StyleSheet)
+        else:
+            pass
 
 
 class LevelInfoViewer(QtWidgets.QWidget):
@@ -385,15 +650,36 @@ class LevelInfoViewer(QtWidgets.QWidget):
         QtWidgets.QWidget.__init__(self)
         self.file = LevelInfoFile()
 
+        if VMode == 'Dark':
+            self.setStyleSheet(StyleSheet)
+        else:
+            pass
+        
         # Create the Worlds widgets
-        WorldBox = QtWidgets.QGroupBox('Worlds')
-        self.WorldPicker = DNDPicker(self.HandleWDragDrop)
-        self.WABtn = QtWidgets.QPushButton('Add')
-        self.WRBtn = QtWidgets.QPushButton('Remove')
-
-        # Add some tooltips
-        self.WABtn.setToolTip('<b>Add:</b><br>Adds a world to the file.')
-        self.WRBtn.setToolTip('<b>Remove:</b><br>Removes the currently selected world from the file.')
+        if MSLANG == 'English':
+            WorldBox = QtWidgets.QGroupBox('Worlds')
+            self.WorldPicker = DNDPicker(self.HandleWDragDrop)
+            self.WABtn = QtWidgets.QPushButton('Add')
+            self.WRBtn = QtWidgets.QPushButton('Remove')
+            # Add some tooltips
+            self.WABtn.setToolTip('<b>Add:</b><br>Adds a world to the file.')
+            self.WRBtn.setToolTip('<b>Remove:</b><br>Removes the currently selected world from the file.')
+            if VMode == 'Dark':
+                self.setStyleSheet(StyleSheet)
+            else:
+                pass
+        else:
+            WorldBox = QtWidgets.QGroupBox('ワールド')
+            self.WorldPicker = DNDPicker(self.HandleWDragDrop)
+            self.WABtn = QtWidgets.QPushButton('追加')
+            self.WRBtn = QtWidgets.QPushButton('削除')
+            self.WABtn.setToolTip('<b>追加:</b><br>ワールドを追加します。')
+            self.WRBtn.setToolTip('<b>削除:</b><br>選択したワールドを削除します。')
+            if VMode == 'Dark':
+                self.setStyleSheet(StyleSheet)
+            else:
+                pass
+            
 
         # Disable some
         self.WRBtn.setEnabled(False)
@@ -420,12 +706,18 @@ class LevelInfoViewer(QtWidgets.QWidget):
         LevelBox = QtWidgets.QWidget()
         self.LevelPicker = DNDPicker(self.HandleLDragDrop)
         self.LevelEdit = LevelEditor()
-        self.LABtn = QtWidgets.QPushButton('Add')
-        self.LRBtn = QtWidgets.QPushButton('Remove')
-
-        # Add some tooltips
-        self.LABtn.setToolTip('<b>Add:</b><br>Adds a level to the currently selected world.')
-        self.LRBtn.setToolTip('<b>Remove:</b><br>Removes the currently selected level from the world.')
+        if MSLANG == 'English':
+            self.LABtn = QtWidgets.QPushButton('Add')
+            self.LRBtn = QtWidgets.QPushButton('Remove')
+            # Add some tooltips
+            self.LABtn.setToolTip('<b>Add:</b><br>Adds a level to the currently selected world.')
+            self.LRBtn.setToolTip('<b>Remove:</b><br>Removes the currently selected level from the world.')
+        else:
+            self.LABtn = QtWidgets.QPushButton('追加')
+            self.LRBtn = QtWidgets.QPushButton('削除')
+            # Add some tooltips
+            self.LABtn.setToolTip('<b>追加:</b><br>ステージを追加します。')
+            self.LRBtn.setToolTip('<b>削除:</b><br>選択したステージを削除します。')
 
         # Disable some
         self.LABtn.setEnabled(False)
@@ -449,29 +741,55 @@ class LevelInfoViewer(QtWidgets.QWidget):
 
         # Create the Comments editor and layout
         self.CommentsBox = QtWidgets.QWidget()
-        label = QtWidgets.QLabel('You can add comments to the file here:')
+        if MSLANG =='English':
+            label = QtWidgets.QLabel('You can add comments to the file here:\n(You can\'t type 2byte charactors :\'( )')
+        else:
+            label = QtWidgets.QLabel('ここにコメントを書き込めます。(2バイト文字を除く):')
         self.CommentsEdit = QtWidgets.QPlainTextEdit()
 
         self.CommentsEdit.textChanged.connect(self.HandleCommentsChanged)
 
-        STL = QtWidgets.QVBoxLayout()
+        STL = QtWidgets.QVBoxLayout(self)
         STL.addWidget(label)
         STL.addWidget(self.CommentsEdit)
         self.CommentsBox.setLayout(STL)
 
+        if VMode == 'Dark':
+            self.setStyleSheet(StyleSheet)
+        else:
+            pass
 
         # Create the tab widget
-        tab = QtWidgets.QTabWidget()
-        tab.addTab(self.WorldEdit, 'World Options')
-        tab.addTab(LevelBox, 'Levels')
-        tab.addTab(self.CommentsBox, 'Comments')
+        tab = QtWidgets.QTabWidget(self)
+        if MSLANG == 'English':
+            tab.addTab(self.WorldEdit, 'World Options')
+            tab.addTab(LevelBox, 'Levels')
+            tab.addTab(self.CommentsBox, 'Comments')
+            if VMode == 'Dark':
+                self.setStyleSheet(StyleSheet)
+            else:
+                pass
+        else:
+            tab.addTab(self.WorldEdit, 'ワールド設定')
+            tab.addTab(LevelBox, 'ステージ')
+            tab.addTab(self.CommentsBox, 'コメント')
+            if VMode == 'Dark':
+                self.setStyleSheet(StyleSheet)
+            else:
+                pass
 
+        
         # Make a main layout
-        L = QtWidgets.QHBoxLayout()
+        L = QtWidgets.QHBoxLayout(self)
         L.addWidget(WorldBox)
         L.addWidget(tab)
         self.setLayout(L)
 
+        if VMode == 'Dark':
+            self.setStyleSheet(StyleSheet)
+        else:
+            pass
+        
     def setFile(self, file):
         """Changes the file to view"""
         self.file = file
@@ -504,11 +822,26 @@ class LevelInfoViewer(QtWidgets.QWidget):
         # LevelPicker
         for item in self.LevelPicker.findItems('', QtCore.Qt.MatchContains):
             level = item.data(QtCore.Qt.UserRole)
-            item.setText(level.name)
+
+            levelTable = ['A', 'Tower', 'GH', 'Castle', 'Cannon', 'FCastle', 'Ambush', 'Airship', 'Peach', 'HouseI', 'HouseS', 'HouseU', 'Anchor', 'Coin', 'B', 'C', 'Bonus']
+            
+            # if MSLANG == 'English':
+            #     levelTable = ['A', 'Tower', 'GH', 'Castle', 'Cannon', 'FCastle', 'Ambush', 'Airship', 'Peach', 'HouseI', 'HouseS', 'HouseU', 'Anchor', 'Coin', 'B', 'C', 'Bonus']
+            # else:
+            #     levelTable = ['A', '塔', 'お化け屋敷', '城', '大砲', 'クッパ城', '敵', '飛行船', 'ピーチ', 'HouseI', 'HouseS', 'HouseU', 'アンカー', 'コイン', 'B', 'C', 'ボーナス']
+            levelS = str(level.DisplayL)
+            if level.DisplayL >= 20 and level.DisplayL <= 36:
+                levelS = levelTable[level.DisplayL-20]
+
+            item.setText(str(level.DisplayW) + '-' + levelS + ': ' + str(level.name))
 
     def saveFile(self):
         """Returns the file in saved form"""
         return self.file.save() # self.file does this for us
+
+    def exportTXTFile(self):
+        """Returns the file in txt form"""
+        return self.file.exportTXT() # self.file does this for us
 
 
 
@@ -711,12 +1044,20 @@ class WorldOptionsEditor(QtWidgets.QWidget):
         self.RNameEdit.setMaxLength(255)
 
         # Add some tooltips
-        numberWarning = '<br><br><b>Note:</b><br>You can only set the world\'s World Number if you have at least one world half turned on!'
-        self.NumberEdit.setToolTip('<b>World Number:</b><br>Changes the currently selected world\'s World Number.' + numberWarning)
-        self.LExistsEdit.setToolTip('<b>Has a 1st Half:</b><br>If this is checked, the currently selected world will have a first half.' + numberWarning)
-        self.LNameEdit.setToolTip('<b>1st Half Name:</b><br>Changes the name for the first half of the world.')
-        self.RExistsEdit.setToolTip('<b>Has a 2nd Half:</b><br>If this is checked, the currently selected world will have a second half.' + numberWarning)
-        self.RNameEdit.setToolTip('<b>2nd Half Name:</b><br>Changes the name for the second half of the world.')
+        if MSLANG == 'English':
+            numberWarning = '<br><br><b>Note:</b><br>You can only set the world\'s World Number if you have at least one world half turned on!'
+            self.NumberEdit.setToolTip('<b>World Number:</b><br>Changes the currently selected world\'s World Number.' + numberWarning)
+            self.LExistsEdit.setToolTip('<b>Has a 1st Half:</b><br>If this is checked, the currently selected world will have a first half.' + numberWarning)
+            self.LNameEdit.setToolTip('<b>1st Half Name:</b><br>Changes the name for the first half of the world.')
+            self.RExistsEdit.setToolTip('<b>Has a 2nd Half:</b><br>If this is checked, the currently selected world will have a second half.' + numberWarning)
+            self.RNameEdit.setToolTip('<b>2nd Half Name:</b><br>Changes the name for the second half of the world.')
+        else:
+            numberWarning = '<br><br><b>メモ:</b><br>You can only set the world\'s World Number if you have at least one world half turned on!'
+            self.NumberEdit.setToolTip('<b>ワールド番号:</b><br>Changes the currently selected world\'s World Number.' + numberWarning)
+            self.LExistsEdit.setToolTip('<b>Has a 1st Half:</b><br>If this is checked, the currently selected world will have a first half.' + numberWarning)
+            self.LNameEdit.setToolTip('<b>1st Half Name:</b><br>Changes the name for the first half of the world.')
+            self.RExistsEdit.setToolTip('<b>Has a 2nd Half:</b><br>If this is checked, the currently selected world will have a second half.' + numberWarning)
+            self.RNameEdit.setToolTip('<b>2nd Half Name:</b><br>Changes the name for the second half of the world.')
 
         # Disable them all
         self.NumberEdit.setEnabled(False)
@@ -733,12 +1074,20 @@ class WorldOptionsEditor(QtWidgets.QWidget):
         self.RNameEdit.textEdited.connect(self.HandleRNameChange)
 
         # Create a layout
-        L = QtWidgets.QFormLayout()
-        L.addRow('World Number:', self.NumberEdit)
-        L.addRow('Has a 1st Half:', self.LExistsEdit)
-        L.addRow('1st Half Name:', self.LNameEdit)
-        L.addRow('Has a 2nd Half:', self.RExistsEdit)
-        L.addRow('2nd Half Name:', self.RNameEdit)
+        if MSLANG == 'English':
+            L = QtWidgets.QFormLayout()
+            L.addRow('World Number:', self.NumberEdit)
+            L.addRow('Has a 1st Half:', self.LExistsEdit)
+            L.addRow('1st Half Name:', self.LNameEdit)
+            L.addRow('Has a 2nd Half:', self.RExistsEdit)
+            L.addRow('2nd Half Name:', self.RNameEdit)
+        else:
+            L = QtWidgets.QFormLayout()
+            L.addRow('ワールド番号:', self.NumberEdit)
+            L.addRow('Has a 1st Half:', self.LExistsEdit)
+            L.addRow('1st Half Name:', self.LNameEdit)
+            L.addRow('Has a 2nd Half:', self.RExistsEdit)
+            L.addRow('2nd Half Name:', self.RNameEdit)
         self.setLayout(L)
 
 
@@ -851,15 +1200,27 @@ class LevelEditor(QtWidgets.QGroupBox):
         self.SecretExitEdit = QtWidgets.QCheckBox()
         self.HalfEdit = QtWidgets.QComboBox()
         self.HalfEdit.addItems(['1st Half', '2nd Half'])
+        self.VignetteEdit = QtWidgets.QComboBox()
+        self.VignetteEdit.addItems(['None'])
+        self.HideTimerEdit = QtWidgets.QCheckBox()
 
         # Add some tooltips
-        self.NameEdit.setToolTip('<b>Name:</b><br>Changes the level\'s name.')
-        self.FileEdit.setToolTip('<b>Filename:</b><br>Changes the name of the file the level will load from (.arc is automatically added).')
-        self.DisplayEdit.setToolTip('<b>Display Name:</b><br>Changes the on-screen name of this level.<br><br><b>Note:</b><br>Special characters are often used here - symbols such as Castle, Tower, Boo House and Toad House. Each can be used by picking a specific number. Look at Newer SMBW\'s original LevelInfo.bin to find some!')
-        self.IsLevelEdit.setToolTip('<b>Star Coins Menu:</b><br>If this is checked, the level will appear in the Star Coins Menu.')
-        self.NormalExitEdit.setToolTip('<b>Normal Exit:</b><br>If this is checked, the level will have a normal exit.')
-        self.SecretExitEdit.setToolTip('<b>Secret Exit:</b><br>If this is checked, the level will have a secret exit.')
-        self.HalfEdit.setToolTip('<b>World Half:</b><br>This changes which side of the Star Coins menu the level appears on.')
+        if MSLANG == 'English':
+            self.NameEdit.setToolTip('<b>Name:</b><br>Changes the level\'s name.')
+            self.FileEdit.setToolTip('<b>Filename:</b><br>Changes the name of the file the level will load from (.arc is automatically added).')
+            self.DisplayEdit.setToolTip('<b>Display Name:</b><br>Changes the on-screen name of this level.<br><br><b>Note:</b><br>Special characters are often used here - symbols such as Castle, Tower, Boo House and Toad House. Each can be used by picking a specific number. Look at Newer SMBW\'s original LevelInfo.bin to find some!')
+            self.IsLevelEdit.setToolTip('<b>Star Coins Menu:</b><br>If this is checked, the level will appear in the Star Coins Menu.')
+            self.NormalExitEdit.setToolTip('<b>Normal Exit:</b><br>If this is checked, the level will have a normal exit.')
+            self.SecretExitEdit.setToolTip('<b>Secret Exit:</b><br>If this is checked, the level will have a secret exit.')
+            self.HalfEdit.setToolTip('<b>World Half:</b><br>This changes which side of the Star Coins menu the level appears on.')
+        else:
+            self.NameEdit.setToolTip('<b>ステージ名:</b><br>ここでステージの名前を設定します。')
+            self.FileEdit.setToolTip('<b>ファイル名:</b><br>読み込むファイルの名前を変更します。(例:01-01 -> 01-01.arcが読み込まれます)')
+            self.DisplayEdit.setToolTip('<b>表示名:</b><br>ゲーム内で表示されるステージの番号を変更します。<br><br><b>メモ:</b><br>特殊文字を入力するには、次のように入力します。 - 特殊文字の例:10-A、11-B、12-C、13-D、14-E、20-A、21-塔、22-塔(2)、23-城、24-塔(3)、25-クッパ城、26-汽車、27-飛行船、29-ヨッシーの家、36-ミュージックハウス、37-店、38-チャレンジスターハウス、39-赤スイッチ、40-青スイッチ、41-黄スイッチ、42-緑スイッチ')
+            self.IsLevelEdit.setToolTip('<b>スターコインメニュー:</b><br>チェックを入れると、選択したステージがスターコインメニューに表示されます。')
+            self.NormalExitEdit.setToolTip('<b>ゴール:</b><br>チェックを入れると、ゴールが有効になります。')
+            self.SecretExitEdit.setToolTip('<b>隠しゴール:</b><br>チェックを入れると、隠しゴールが有効になります。')
+            self.HalfEdit.setToolTip('<b>World Half:</b><br>This changes which side of the Star Coins menu the level appears on.')
 
         # Disable them
         self.NameEdit.setEnabled(False)
@@ -869,6 +1230,8 @@ class LevelEditor(QtWidgets.QGroupBox):
         self.NormalExitEdit.setEnabled(False)
         self.SecretExitEdit.setEnabled(False)
         self.HalfEdit.setEnabled(False)
+        self.VignetteEdit.setEnabled(False)
+        self.HideTimerEdit.setEnabled(False)
 
         # Connect them to handlers
         self.NameEdit.textEdited.connect(self.HandleNameChange)
@@ -878,16 +1241,29 @@ class LevelEditor(QtWidgets.QGroupBox):
         self.NormalExitEdit.stateChanged.connect(self.HandleNormalExitChange)
         self.SecretExitEdit.stateChanged.connect(self.HandleSecretExitChange)
         self.HalfEdit.currentIndexChanged.connect(self.HandleHalfChange)
+        self.VignetteEdit.currentIndexChanged.connect(self.HandleVignetteChange)
+        self.HideTimerEdit.stateChanged.connect(self.HandleHideTimerChange)
 
         # Create a layout
-        L = QtWidgets.QFormLayout()
-        L.addRow('Name:', self.NameEdit)
-        L.addRow('Filename:', self.FileEdit)
-        L.addRow('Display Name:', self.DisplayEdit)
-        L.addRow('Normal Exit:', self.NormalExitEdit)
-        L.addRow('Secret Exit:', self.SecretExitEdit)
-        L.addRow('Star Coins Menu:', self.IsLevelEdit)
-        L.addRow('World Half:', self.HalfEdit)
+        if MSLANG == 'English':
+            L = QtWidgets.QFormLayout()
+            L.addRow('Name:', self.NameEdit)
+            L.addRow('Filename:', self.FileEdit)
+            L.addRow('Display Name:', self.DisplayEdit)
+            L.addRow('Normal Exit:', self.NormalExitEdit)
+            L.addRow('Secret Exit:', self.SecretExitEdit)
+            L.addRow('Star Coins Menu:', self.IsLevelEdit)
+            L.addRow('World Half:', self.HalfEdit)
+        else:
+            L = QtWidgets.QFormLayout()
+            L.addRow('ステージ名:', self.NameEdit)
+            L.addRow('ファイル名:', self.FileEdit)
+            L.addRow('表示番号:', self.DisplayEdit)
+            L.addRow('ゴール:', self.NormalExitEdit)
+            L.addRow('隠しゴール:', self.SecretExitEdit)
+            L.addRow('スターコインメニュー:', self.IsLevelEdit)
+            L.addRow('World Half:', self.HalfEdit)
+            
         self.setLayout(L)
 
         # Watch for PageUp/PageDown
@@ -899,8 +1275,15 @@ class LevelEditor(QtWidgets.QGroupBox):
                            self.NormalExitEdit,
                            self.SecretExitEdit,
                            self.IsLevelEdit,
-                           self.HalfEdit]:
+                           self.HalfEdit,
+                           self.VignetteEdit,
+                           self.HideTimerEdit]:
             leafWidget.installEventFilter(self)
+            
+        if VMode == 'Dark':
+            self.setStyleSheet(StyleSheet)
+        else:
+            pass
 
 
     def eventFilter(self, obj, event):
@@ -931,6 +1314,8 @@ class LevelEditor(QtWidgets.QGroupBox):
         self.NormalExitEdit.setEnabled(False)
         self.SecretExitEdit.setEnabled(False)
         self.HalfEdit.setEnabled(False)
+        self.VignetteEdit.setEnabled(False)
+        self.HideTimerEdit.setEnabled(False)
 
         # Set them all to '', 0, and False
         self.NameEdit.setText('')
@@ -940,6 +1325,8 @@ class LevelEditor(QtWidgets.QGroupBox):
         self.NormalExitEdit.setChecked(False)
         self.SecretExitEdit.setChecked(False)
         self.HalfEdit.setCurrentIndex(0)
+        self.VignetteEdit.setCurrentIndex(0)
+        self.HideTimerEdit.setChecked(False)
 
     def setLevel(self, level):
         """Sets the level to be edited"""
@@ -954,6 +1341,8 @@ class LevelEditor(QtWidgets.QGroupBox):
         self.NormalExitEdit.setEnabled(True)
         self.SecretExitEdit.setEnabled(True)
         self.HalfEdit.setEnabled(True)
+        self.VignetteEdit.setEnabled(True)
+        self.HideTimerEdit.setEnabled(True)
 
         # Set them to the correct values
         self.NameEdit.setText(level.name)
@@ -963,6 +1352,8 @@ class LevelEditor(QtWidgets.QGroupBox):
         self.NormalExitEdit.setChecked(level.NormalExit)
         self.SecretExitEdit.setChecked(level.SecretExit)
         self.HalfEdit.setCurrentIndex(1 if level.RightSide else 0)
+        self.VignetteEdit.setCurrentIndex(level.Vignette)
+        self.HideTimerEdit.setChecked(level.HideTimer)
 
     def HandleNameChange(self):
         """Handles self.NameEdit changes"""
@@ -1009,6 +1400,18 @@ class LevelEditor(QtWidgets.QGroupBox):
         self.level.RightSide = (self.HalfEdit.currentIndex() == 1)
         self.dataChanged.emit()
 
+    def HandleVignetteChange(self):
+        """Handles self.HalfEdit changes"""
+        if self.level == None: return
+        self.level.Vignette = self.VignetteEdit.currentIndex()
+        self.dataChanged.emit()
+
+    def HandleHideTimerChange(self):
+        """Handles self.HideTimerEdit changes"""
+        if self.level == None: return
+        self.level.HideTimer = self.HideTimerEdit.isChecked()
+        self.dataChanged.emit()
+
 
 
 class LevelNameEdit(QtWidgets.QWidget):
@@ -1028,13 +1431,18 @@ class LevelNameEdit(QtWidgets.QWidget):
         self.WEdit.valueChanged.connect(self.emitDataChange)
         self.LEdit.valueChanged.connect(self.emitDataChange)
 
-        L = QtWidgets.QHBoxLayout()
+        L = QtWidgets.QHBoxLayout(self)
         L.setContentsMargins(0, 0, 0, 0)
         L.addWidget(self.WEdit)
         L.addWidget(Label)
         L.addWidget(self.LEdit)
         self.setLayout(L)
 
+        if VMode == 'Dark':
+            self.setStyleSheet(StyleSheet)
+        else:
+            pass
+    
     def setData(self, w, L):
         """Sets the world and level values"""
         self.WEdit.setValue(w)
@@ -1085,49 +1493,133 @@ class MainWindow(QtWidgets.QMainWindow):
         self.CreateMenubar()
 
         # Set window title and show the window
-        self.setWindowTitle('Level Info Editor')
+        self.setWindowTitle(f"{AppName}{version}")
         self.show()
+        
+        if VMode == 'Dark':
+            self.setStyleSheet(StyleSheet)
+        else:
+            pass
 
     def CreateMenubar(self):
         """Sets up the menubar"""
         m = self.menuBar()
 
         # File Menu
-        f = m.addMenu('&File')
+        if MSLANG == 'English':
+            f = m.addMenu('&File')
 
-        openAct = f.addAction('Open File...')
-        openAct.setShortcut('Ctrl+O') 
-        openAct.triggered.connect(self.HandleOpen)
+            openAct = f.addAction('Open File...')
+            openAct.setShortcut('Ctrl+O') 
+            openAct.triggered.connect(self.HandleOpen)
 
-        self.saveAct = f.addAction('Save File')
-        self.saveAct.setShortcut('Ctrl+S')
-        self.saveAct.triggered.connect(self.HandleSave)
-        self.saveAct.setEnabled(False)
+            openOldAct = f.addAction('Open Old File...')
+            openOldAct.setShortcut('Ctrl+Shift+O') 
+            openOldAct.triggered.connect(self.HandleOldOpen)
 
-        saveAsAct = f.addAction('Save File As...')
-        saveAsAct.setShortcut('Ctrl+Shift+S')
-        saveAsAct.triggered.connect(self.HandleSaveAs)
+            self.saveAct = f.addAction('Save File')
+            self.saveAct.setShortcut('Ctrl+S')
+            self.saveAct.triggered.connect(self.HandleSave)
+            self.saveAct.setEnabled(False)
 
-        f.addSeparator()
+            saveAsAct = f.addAction('Save File As...')
+            saveAsAct.setShortcut('Ctrl+Shift+S')
+            saveAsAct.triggered.connect(self.HandleSaveAs)
 
-        exitAct = f.addAction('Exit')
-        exitAct.setShortcut('Ctrl+Q')
-        exitAct.triggered.connect(self.HandleExit)
+            self.exportAct = f.addAction('Export Text File...')
+            self.exportAct.setShortcut('Ctrl+Shift+E') 
+            self.exportAct.triggered.connect(self.HandleExport)
+            self.exportAct.setEnabled(False)
 
+            f.addSeparator()
+
+            exitAct = f.addAction('Exit')
+            exitAct.setShortcut('Ctrl+Q')
+            exitAct.triggered.connect(self.HandleExit)
+            
+            # Setting Menu
+            s = m.addMenu('&Settings')
+            
+            aboutAct = s.addAction('Language')
+            aboutAct.setShortcut('Ctrl+L')
+            aboutAct.triggered.connect(self.HandleLS)
+
+            aboutAct = s.addAction('Appearance')
+            aboutAct.setShortcut('Ctrl+D')
+            aboutAct.triggered.connect(self.HandleVS)
+        
+        else:
+            f = m.addMenu('&ファイル')
+
+            openAct = f.addAction('ファイルを開く')
+            openAct.setShortcut('Ctrl+O') 
+            openAct.triggered.connect(self.HandleOpen)
+
+            openOldAct = f.addAction('ファイルを開く(従来版)')
+            openOldAct.setShortcut('Ctrl+Shift+O') 
+            openOldAct.triggered.connect(self.HandleOldOpen)
+
+            self.saveAct = f.addAction('ファイルを保存')
+            self.saveAct.setShortcut('Ctrl+S')
+            self.saveAct.triggered.connect(self.HandleSave)
+            self.saveAct.setEnabled(False)
+
+            saveAsAct = f.addAction('名前を付けてファイルを保存')
+            saveAsAct.setShortcut('Ctrl+Shift+S')
+            saveAsAct.triggered.connect(self.HandleSaveAs)
+
+            self.exportAct = f.addAction('テキストファイルを出力')
+            self.exportAct.setShortcut('Ctrl+Shift+E') 
+            self.exportAct.triggered.connect(self.HandleExport)
+            self.exportAct.setEnabled(False)
+
+            f.addSeparator()
+
+            exitAct = f.addAction('閉じる')
+            exitAct.setShortcut('Ctrl+Q')
+            exitAct.triggered.connect(self.HandleExit)
+            
+            # Setting Menu
+            s = m.addMenu('&設定')
+            
+            aboutAct = s.addAction('言語')
+            aboutAct.setShortcut('Ctrl+L')
+            aboutAct.triggered.connect(self.HandleLS)
+
+            aboutAct = s.addAction('外観')
+            aboutAct.setShortcut('Ctrl+D')
+            aboutAct.triggered.connect(self.HandleVS)
+            
         # Help Menu
-        h = m.addMenu('&Help')
+        if MSLANG == 'English':
+            h = m.addMenu('&Help')
 
-        aboutAct = h.addAction('About...')
-        aboutAct.setShortcut('Ctrl+H')
-        aboutAct.triggered.connect(self.HandleAbout)
+            aboutAct = h.addAction(f"about {AppName} {version}")
+            aboutAct.setShortcut('Ctrl+H')
+            aboutAct.triggered.connect(self.HandleAbout)
+        else:
+            h = m.addMenu('&ヘルプ')
 
+            aboutAct = h.addAction(f"{AppName} {version} について")
+            aboutAct.setShortcut('Ctrl+H')
+            aboutAct.triggered.connect(self.HandleAbout)
+
+        if VMode == 'Dark':
+            self.setStyleSheet(StyleSheet)
+        else:
+            pass
 
     def HandleOpen(self):
         """Handles file opening"""
-        fp = QtWidgets.QFileDialog.getOpenFileName(self, 'Open File', '', 'Binary Files (*.bin);;All Files (*)')[0]
-        if fp == '': return
-        self.fp = fp
-
+        if MSLANG == 'English':
+            fp = QtWidgets.QFileDialog.getOpenFileName(self, 'Open File', '', 'Binary Files (*.bin);;All Files (*)')[0]
+            if fp == '': return
+            self.fp = fp
+        else:
+            fp = QtWidgets.QFileDialog.getOpenFileName(self, 'ファイルを開く', '', 'バイナリファイル (*.bin);;全てのファイル (*)')[0]
+            if fp == '': return
+            self.fp = fp
+            
         # Open the file
         file = open(fp, 'rb')
         data = file.read()
@@ -1139,6 +1631,32 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Enable saving
         self.saveAct.setEnabled(True)
+        self.exportAct.setEnabled(True)
+
+
+    def HandleOldOpen(self):
+        """Handles file opening"""
+        if MSLANG == 'English':
+            fp = QtWidgets.QFileDialog.getOpenFileName(self, 'Open File', '', 'Binary Files (*.bin);;All Files (*)')[0]
+            if fp == '': return
+            self.fp = fp
+        else:
+            fp = QtWidgets.QFileDialog.getOpenFileName(self, 'ファイルを開く', '', 'バイナリファイル (*.bin);;全てのファイル (*)')[0]
+            if fp == '': return
+            self.fp = fp
+
+        # Open the file
+        file = open(fp, 'rb')
+        data = file.read()
+        file.close()
+        LevelInfo = LevelInfoFile(data, True)
+
+        # Update the viewer with this data
+        self.view.setFile(LevelInfo)
+
+        # Enable saving
+        self.saveAct.setEnabled(True)
+        self.exportAct.setEnabled(True)
 
     def HandleSave(self):
         """Handles file saving"""
@@ -1151,24 +1669,257 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def HandleSaveAs(self):
         """Handles saving to a new file"""
-        fp = QtWidgets.QFileDialog.getSaveFileName(self, 'Save File', '', 'Binary Files (*.bin);;All Files (*)')[0]
-        if fp == '': return
-        self.fp = fp
-
+        if MSLANG == 'English':
+            fp = QtWidgets.QFileDialog.getSaveFileName(self, 'Save File', '', 'Binary Files (*.bin);;All Files (*)')[0]
+            if fp == '': return
+            self.fp = fp
+        else:
+            fp = QtWidgets.QFileDialog.getSaveFileName(self, '名前を付けてファイルを保存', '', 'バイナリファイル (*.bin);;全てのファイル (*)')[0]
+            if fp == '': return
+            self.fp = fp
+            
         # Save it
         self.HandleSave()
 
         # Enable saving
         self.saveAct.setEnabled(True)
+        self.exportAct.setEnabled(True)
+
+    def HandleExport(self):
+        """Handles saving to a text file"""
+        if MSLANG == 'English':
+            tfp = QtWidgets.QFileDialog.getSaveFileName(self, 'Export Text File', '', 'Text Files (*.txt);;All Files (*)')[0]
+            if tfp == '': return
+        else:
+            tfp = QtWidgets.QFileDialog.getSaveFileName(self, 'テキストファイルを出力', '', 'テキストファイル (*.txt);;全てのファイル (*)')[0]
+            if tfp == '': return
+
+        # Save it
+        data = self.view.exportTXTFile()
+
+        # Open the file
+        file = open(tfp, 'w')
+        file.write(data)
+        file.close()
+
+        # Enable saving
+        self.saveAct.setEnabled(True)
+        self.exportAct.setEnabled(True)
 
     def HandleExit(self):
         """Exits"""
         raise SystemExit
 
+# Added by wakanameko
+
+    def HandleEN(self):
+        with open(f"{s}/data.txt", "r") as f:
+            for line in f:
+                if "EN" in line:
+                    MSLANG = 'English'
+                    print('Selected EN!')
+                else:
+                    MSLANG = 'Japanese'
+                    print('Selected JP!')
+                if "L" in line:
+                    VMode = 'Light'
+                    print('Selected Light!')
+                else:
+                    VMode = 'Dark'
+                    print('Selected Dark!')
+            if MSLANG == 'Japanese':
+                if VMode == 'Light':
+                    DFile = open(STpath, 'w')
+                    DFile.write("ENL")
+                    DFile.close()
+                else:
+                    DFile = open(STpath, 'w')
+                    DFile.write("END")
+                    DFile.close()
+            else:
+                pass
+
+    def HandleJP(self):
+        with open(f"{s}/data.txt", "r") as f:
+            for line in f:
+                if "EN" in line:
+                    MSLANG = 'English'
+                    print('Selected EN!')
+                else:
+                    MSLANG = 'Japanese'
+                    print('Selected JP!')
+                if "L" in line:
+                    VMode = 'Light'
+                    print('Selected Light!')
+                else:
+                    VMode = 'Dark'
+                    print('Selected Dark!')
+            if MSLANG == 'English':
+                if VMode == 'Light':
+                    DFile = open(STpath, 'w')
+                    DFile.write("JPL")
+                    DFile.close()
+                else:
+                    DFile = open(STpath, 'w')
+                    DFile.write("JPD")
+                    DFile.close()
+            else:
+                pass
+
+    def HandleLS(self):
+        """Shows the About dialog"""
+        # Add Buttons
+        LangWindow = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok)
+        #LangWindow = QtWidgets.QMdiSubWindow
+        if MSLANG == 'English':
+            self.ENTip = QtWidgets.QPushButton('English')
+            self.ENTip.setToolTip('<b>English:</b><br>Change language to English.')
+            self.ENTip.setHidden(False) 
+            self.JPTip = QtWidgets.QPushButton('Japanese')
+            self.JPTip.setToolTip('<b>Japanese:</b><br>Change language to Japanese.')
+        else:
+            self.ENTip = QtWidgets.QPushButton('英語')
+            self.ENTip.setToolTip('<b>英語:</b><br>言語を英語に変更します。')
+            self.ENTip.setHidden(False) 
+            self.JPTip = QtWidgets.QPushButton('日本語')
+            self.JPTip.setToolTip('<b>日本語:</b><br>言語を日本語に変更します。')
+        self.JPTip.setHidden(False) 
+        # layout
+        layout = QtWidgets.QVBoxLayout()
+        layout.addWidget(LangWindow)
+        layout = QtWidgets.QHBoxLayout() 
+        layout.addWidget(self.ENTip) 
+        layout.addWidget(self.JPTip) 
+
+        # Click Buttons
+        self.ENTip.clicked.connect(self.HandleEN)
+        self.JPTip.clicked.connect(self.HandleJP)
+
+        dlg = QtWidgets.QDialog(self)
+        if MSLANG == 'English':
+            dlg.setWindowTitle('Select Language')
+        else:
+            dlg.setWindowTitle('言語選択')
+        dlg.setLayout(layout)
+        dlg.setModal(True)
+        dlg.setMinimumWidth(384)
+                
+        if VMode == 'Dark':
+            self.setStyleSheet(StyleSheet)
+        else:
+            pass
+
+        dlg.exec_()
+
+    def HandleWH(self):
+        with open(f"{s}/data.txt", "r") as f:
+            for line in f:
+                if "EN" in line:
+                    MSLANG = 'English'
+                    print('Selected EN!')
+                else:
+                    MSLANG = 'Japanese'
+                    print('Selected JP!')
+                if "L" in line:
+                    VMode = 'Light'
+                    print('Selected Light!')
+                else:
+                    VMode = 'Dark'
+                    print('Selected Dark!')
+            if VMode == 'Dark':
+                if MSLANG == 'English':
+                    DFile = open(STpath, 'w')
+                    DFile.write("ENL")
+                    DFile.close()
+                else:
+                    DFile = open(STpath, 'w')
+                    DFile.write("JPL")
+                    DFile.close()
+            else:
+                pass
+
+    def HandleDR(self):        
+        with open(f"{s}/data.txt", "r") as f:
+            for line in f:
+                if "EN" in line:
+                    MSLANG = 'English'
+                    print('Selected EN!')
+                else:
+                    MSLANG = 'Japanese'
+                    print('Selected JP!')
+                if "L" in line:
+                    VMode = 'Light'
+                    print('Selected Light!')
+                else:
+                    VMode = 'Dark'
+                    print('Selected Dark!')
+            if VMode == 'Light':
+                if MSLANG == 'English':
+                    DFile = open(STpath, 'w')
+                    DFile.write("END")
+                    DFile.close()
+                else:
+                    DFile = open(STpath, 'w')
+                    DFile.write("JPD")
+                    DFile.close()
+            else:
+                pass
+
+    def HandleVS(self):
+        """Shows the About dialog"""
+        # Add Buttons
+        VSWindow = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok)
+        #VSWindow = QtWidgets.QMdiSubWindow
+        if MSLANG == 'English':
+            self.WHTip = QtWidgets.QPushButton('Light Mode')
+            self.WHTip.setToolTip('<b>Light Mode:</b><br>Change the appearance to White mode.')
+            self.WHTip.setHidden(False) 
+            self.DRTip = QtWidgets.QPushButton('Dark Mode')
+            self.DRTip.setToolTip('<b>Dark Mode:</b><br>Change the appearance to dark mode.')
+        else:
+            self.WHTip = QtWidgets.QPushButton('ライトモード')
+            self.WHTip.setToolTip('<b>ライトモード:</b><br>外観をライトモードに変更します。')
+            self.WHTip.setHidden(False) 
+            self.DRTip = QtWidgets.QPushButton('ダークモード')
+            self.DRTip.setToolTip('<b>ダークモード:</b><br>外観をダークモードに変更します。')
+        self.DRTip.setHidden(False) 
+        # layout
+        layout = QtWidgets.QVBoxLayout()
+        layout.addWidget(VSWindow)
+        layout = QtWidgets.QHBoxLayout() 
+        layout.addWidget(self.WHTip) 
+        layout.addWidget(self.DRTip) 
+
+        # Click Buttons
+        self.WHTip.clicked.connect(self.HandleWH)
+        self.DRTip.clicked.connect(self.HandleDR)
+
+        dlg = QtWidgets.QDialog(self)
+        if MSLANG == 'English':
+            dlg.setWindowTitle('Appearance')
+        else:
+            dlg.setWindowTitle('外観モード')
+        dlg.setLayout(layout)
+        dlg.setModal(True)
+        dlg.setMinimumWidth(384)
+                
+        if VMode == 'Dark':
+            self.setStyleSheet(StyleSheet)
+        else:
+            pass
+
+        dlg.exec_()
+
+# finish
+
     def HandleAbout(self):
         """Shows the About dialog"""
-        try: readme = open('readme.md', 'r').read()
-        except: readme = 'Level Info Editor %s by RoadrunnerWMC\n(No readme.md found!)\nLicensed under GPL 3' % version
+        if MSLANG == 'English':
+            try: readme = open('readme.md', 'r').read()
+            except: readme = (f"{AppName} 1.5        by RoadrunnerWMC\n{AppName} 1.5-TPC by Asu-Chan\n{AppName} {version} by @wakanameko2\n(No readme.md found!)\nLicensed under GPL 3")
+        else:
+            try: readme = open('readme.md', 'r').read()
+            except: readme = (f"{AppName} 1.5        by RoadrunnerWMC\n{AppName} 1.5-TPC by Asu-Chan\n{AppName} {version} by @wakanameko2\n(readme.mdが見つかりません!)\nLicensed under GPL 3")
 
         txtedit = QtWidgets.QPlainTextEdit(readme)
         txtedit.setReadOnly(True)
@@ -1179,10 +1930,20 @@ class MainWindow(QtWidgets.QMainWindow):
         layout.addWidget(txtedit)
         layout.addWidget(buttonBox)
 
-        dlg = QtWidgets.QDialog()
+        dlg = QtWidgets.QDialog(self)
+        if MSLANG == 'English':
+            dlg.setWindowTitle(f"About {AppName} {version}")
+        else:
+            dlg.setWindowTitle(f"{AppName} {version} について")
         dlg.setLayout(layout)
         dlg.setModal(True)
         dlg.setMinimumWidth(384)
+        
+        if VMode == 'Dark':
+            self.setStyleSheet(StyleSheet)
+        else:
+            pass
+        
         buttonBox.accepted.connect(dlg.accept)
         dlg.exec_()
 
