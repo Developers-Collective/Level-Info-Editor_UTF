@@ -6,7 +6,7 @@
 Level Info Editor is a program which can edit and save copies of LevelInfo.bin from Newer Super Mario Bros. Wii.
 
 This mod version can rewrite levelnames with utf-8 encoding. And You can use a Darkmode(developing now...).
-If you want to this, you should use NewerSMBW 1.2.0 modded source code. → (coming soon...)
+If you want to use this tool, you should use NewerSMBW 1.2.0 modded source code. → (coming soon...)
 
 You can import Newer Super Mario Bros. Wii LevelInfo.bin files, though. Make sure to use the "Open Old..." option.
 
