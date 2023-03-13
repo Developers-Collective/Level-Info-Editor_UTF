@@ -11,7 +11,7 @@ You can import Newer Super Mario Bros. Wii LevelInfo.bin files, though. Make sur
 
 ----------------------------------------------------------------
 
-# Mod features
+## Mod features
 
 This mod can rewrite NewerNSMBW's levelnames with utf-16 encoding.  
 
