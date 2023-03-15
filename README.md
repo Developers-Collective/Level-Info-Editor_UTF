@@ -5,7 +5,7 @@
 
 Level Info Editor is a program which can edit and save copies of LevelInfo.bin from Newer Super Mario Bros. Wii.
 
-If you want to use this tool, **you should use NewerSMBW 1.2.0 modded source code.** → (coming soon...)  
+If you want to use this tool, **you should use [NewerSMBW 1.2.0 modded source code](https://github.com/wakanameko/NewerSMBW_UTF-16).**  
 
 You can import Newer Super Mario Bros. Wii LevelInfo.bin files, though. Make sure to use the "Open Old..." option.
 
