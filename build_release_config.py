@@ -7,7 +7,7 @@ import os.path
 
 PROJECT_NAME = 'Level Info Editor'
 FULL_PROJECT_NAME = 'Level Info Editor'
-PROJECT_VERSION = '1.0'
+PROJECT_VERSION = '1.5-UTF'
 
 WIN_ICON = None
 MAC_ICON = None
@@ -15,7 +15,7 @@ MAC_BUNDLE_IDENTIFIER = 'com.newerteam.lie'
 
 SCRIPT_FILE = 'level_info_editor.py'
 DATA_FOLDERS = []
-DATA_FILES = ['charcodes.txt', 'license.txt', 'readme.md']
+DATA_FILES = ['charcodes.txt', 'license.txt', 'readme.md', 'data.txt']
 EXTRA_IMPORT_PATHS = []
 
 USE_PYQT = True
