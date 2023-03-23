@@ -1,4 +1,4 @@
-# Level Info Editor
+# Level Info Editor (testing branch)
 (1.5-UTF)
 
 ----------------------------------------------------------------
@@ -24,16 +24,3 @@ You can select appearances (Light and Dark) and language of this tool.
 * Modded by [Asu-chan](https://github.com/Asu-chan) ([Repo](https://github.com/Asu-chan/NSMBWThePranksterComets/tree/clang-no-translations/Tools/Level%20Info%20Editor))
 
 * Modded Modded by [@wakanameko2](https://github.com/wakanameko) ([Repo](https://github.com/wakanameko/Level-Info-Editor_UTF))
-
-----------------------------------------------------------------
-
-## License
-
-Level Info Editor is released under the GNU General Public License v3.
-See the license file in the distribution for information.
-
-----------------------------------------------------------------
-
-## Usage
-
-Please refer to https://github.com/RoadrunnerWMC/Level-Info-Editor/tree/f7cf5f794796966e9192a7d1907252cc1faa02d2
