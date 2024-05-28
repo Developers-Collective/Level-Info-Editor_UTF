@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 # Level Info Editor - Edits NewerSMBW's LevelInfo.bin
-# Version 1.5-utf
-# Copyright (C) 2013-2021 RoadrunnerWMC, 2021-2022 Asu-chan, 2023 @wakanameko2
+# Version 1.5-utf-1.1
+# Copyright (C) 2013-2021 RoadrunnerWMC, 2021-2022 Asu-chan, 2023-2024 @wakanameko2
 
 # This file is part of Level Info Editor.
 
@@ -30,7 +30,7 @@
 
 
 AppName = 'Level Info Editor'
-version = '1.5-UTF'
+version = '1.5-UTF-1.1'
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 import sys
@@ -40,7 +40,7 @@ import os
 
 s = os.getcwd() #get path
 print(s)
-STpath = (f"{s}/data.txt") # get setting data path
+STpath = (f"{s}/data.txt") # get setting datacd path
 print(STpath)
 SFile = open(STpath, 'r') # open setting file
 lines = SFile.readlines() # read setting file lines
@@ -561,11 +561,11 @@ class LevelInfoFile():
 
             # Add data to worldData for each levels
             for level in world.Levels:
-                levelTable = ['A', 'Tower', 'GH', 'Castle', 'Cannon', 'FCastle', 'Ambush', 'Airship', 'Peach', 'HouseI', 'HouseS', 'HouseU', 'Anchor', 'Coin', 'B', 'C', 'Bonus']
-                levelS = str(level.DisplayL)
-                if level.DisplayL >= 20 and level.DisplayL <= 36:
-                    levelS = levelTable[level.DisplayL-20]
-
+                levelTable = ['A', 'Tower', 'GH', 'Castle', 'Cannon', 'FCastle', 'Ambush', 'Airship', 'Peach', 'HouseI', 'HouseS', 'HouseU', 'Anchor', 'Coin', 'B', 'C', 'Bonus', 'Shop', 'Challenge']
+                levelS = str(level.DisplayL)                        # レベル番号を文字列として処理
+                if level.DisplayL >= 20 and level.DisplayL <= 38:   # 表示されるレベルの番号が20~XXの間の場合
+                    levelS = levelTable[level.DisplayL-20]          # levelTableの(表示されるレベル名-20)番目の名前を持ってきますね(23番の場合はCastle)(該当のレベル名が存在しない場合、クラッシュします。)
+                                                                    # 830行付近にも同様の処理があります。
                 resultxt += "\t{}-{}: {}\n".format(level.DisplayW, levelS, level.name)
                 flags = level.getFlags()
                 worldData.append(level.FileW - 1)
@@ -823,14 +823,14 @@ class LevelInfoViewer(QtWidgets.QWidget):
         for item in self.LevelPicker.findItems('', QtCore.Qt.MatchContains):
             level = item.data(QtCore.Qt.UserRole)
 
-            levelTable = ['A', 'Tower', 'GH', 'Castle', 'Cannon', 'FCastle', 'Ambush', 'Airship', 'Peach', 'HouseI', 'HouseS', 'HouseU', 'Anchor', 'Coin', 'B', 'C', 'Bonus']
+            levelTable = ['A', 'Tower', 'GH', 'Castle', 'Cannon', 'FCastle', 'Ambush', 'Airship', 'Peach', 'HouseI', 'HouseS', 'HouseU', 'Anchor', 'Coin', 'B', 'C', 'Bonus', 'Shop', 'Challenge']
             
             # if MSLANG == 'English':
-            #     levelTable = ['A', 'Tower', 'GH', 'Castle', 'Cannon', 'FCastle', 'Ambush', 'Airship', 'Peach', 'HouseI', 'HouseS', 'HouseU', 'Anchor', 'Coin', 'B', 'C', 'Bonus']
+            #     levelTable = ['A', 'Tower', 'GH', 'Castle', 'Cannon', 'FCastle', 'Ambush', 'Airship', 'Peach', 'HouseI', 'HouseS', 'HouseU', 'Anchor', 'Coin', 'B', 'C', 'Bonus', 'Shop', 'Challenge']
             # else:
-            #     levelTable = ['A', '塔', 'お化け屋敷', '城', '大砲', 'クッパ城', '敵', '飛行船', 'ピーチ', 'HouseI', 'HouseS', 'HouseU', 'アンカー', 'コイン', 'B', 'C', 'ボーナス']
+            #     levelTable = ['A', '塔', 'お化け屋敷', '城', '大砲', 'クッパ城', 'マップ上の敵', '飛行船', 'ピーチ城', 'HouseI', 'HouseS', 'HouseU', 'アンカー', 'コイン', 'B', 'C', 'ボーナス', '店', 'チャレンジハウス']
             levelS = str(level.DisplayL)
-            if level.DisplayL >= 20 and level.DisplayL <= 36:
+            if level.DisplayL >= 20 and level.DisplayL <= 38:
                 levelS = levelTable[level.DisplayL-20]
 
             item.setText(str(level.DisplayW) + '-' + levelS + ': ' + str(level.name))
