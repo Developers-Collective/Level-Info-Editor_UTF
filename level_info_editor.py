@@ -41,7 +41,7 @@ STpath = os.path.dirname(__file__) + '/data.txt'    # get setting datacd path
 
 if not (os.path.isfile(STpath)):    # make data.txt if couldn't found it
     with open(STpath, 'w') as UserData:
-        UserData.write("ENL\n")
+        UserData.write("ENL")
 
 SFile = open(STpath, 'r') # open setting file
 lines = SFile.readlines() # read setting file lines
